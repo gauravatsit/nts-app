@@ -1,24 +1,19 @@
-import React from "react";
-import {Avatar, RaisedButton} from "material-ui";
+import React, {Component} from 'react';
+import {FontIcon,Avatar} from "material-ui";
 import {logout} from "../helpers/auth";
-import Chart from "./chart"
+import Chart from "./chart";
 
 const appTokenKey = "appToken";
-export default class Home extends React.Component {
+class Home extends Component {
     constructor(props) {
         super(props);
         let userObj = JSON.parse(sessionStorage.getItem('userDetails'));
         this.state = {
-            name:userObj.name,
-            photoUrl:userObj.photoUrl,
+            name:userObj === null ? "Guest" :userObj.name,
+            photoUrl:userObj === null ? "" :userObj.photoUrl,
             table:[],
             chart:[]
         };
-        this.handleLogout = this.handleLogout.bind(this);
-        this.fetchData = this.fetchData.bind(this);
-        this.createTable = this.createTable.bind(this);
-        this.getChartData = this.getChartData.bind(this);
-        this.handleButtonClick = this.handleButtonClick.bind(this);
     }
 
     createTable(obj,ind){
@@ -31,7 +26,7 @@ export default class Home extends React.Component {
         )
     }
 
-    handleLogout() {
+    handleLogout = () => {
         logout().then(function () {
             localStorage.removeItem(appTokenKey);
             this.props.history.push("/login");
@@ -39,38 +34,42 @@ export default class Home extends React.Component {
         }.bind(this));
     }
 
-    handleButtonClick(){
+    handleButtonClick = () =>{
         this.props.history.push("/app/form")
     }
 
-    fetchData(url,type){
-        let that = this;
+    fetchData = (url,type)=>{ 
         fetch(url)
-        .then(function(response) {
+        .then(response => {
           if (response.status >= 400) {
             throw new Error("Bad response from server");
           }
           return response.json();
         })
-        .then(function(data) {
-            if(type == 'table')
-                that.setState({ table: data });
+        .then(data => {
+            if(type === 'table')
+            this.loadInterval && this.setState({ table: data });
             else
-                that.setState({ chart: data });
+            this.loadInterval && this.setState({ chart: data });
         });
     }
 
     componentDidMount() { 
-        let tableUrl = 'https://jsonplaceholder.typicode.com/posts';
-        let ChartUrl = 'https://api.worldbank.org/v2/countries/NOR/indicators/NY.GDP.MKTP.KD.ZG?per_page=30&MRV=30&format=json';
-        this.fetchData(tableUrl,'table');
-        this.fetchData(ChartUrl,'chart');
+        const tableUrl = 'https://jsonplaceholder.typicode.com/posts';
+        const ChartUrl = 'https://api.worldbank.org/v2/countries/NOR/indicators/NY.GDP.MKTP.KD.ZG?per_page=30&MRV=30&format=json';
+        this.loadInterval = setInterval(this.fetchData(tableUrl,'table'),100);
+        this.loadInterval = setInterval(this.fetchData(ChartUrl,'chart'),200);  
     }
 
-    getChartData(){
-        var data = this.state.chart;
-      var country_name,indicatorName,year_list,arrayString
-      var arrayString = [],
+    componentWillUnmount(){
+        this.loadInterval && clearInterval(this.loadInterval);
+        this.loadInterval = false;
+    }
+
+    getChartData = () =>{
+        let data = this.state.chart;
+        let country_name,indicatorName
+        let arrayString = [],
         year_list = [],
         array_final = []
 
@@ -91,11 +90,14 @@ export default class Home extends React.Component {
         return (
             {
                 chart: {
-                  type: 'spline',
+                  type: 'area',
                   renderTo: 'container'
                 },
                 title: {
                   text: indicatorName
+                },
+                credits: {
+                    enabled: false
                 },
                 tooltip: {
                   valueDecimals: 2,
@@ -108,14 +110,12 @@ export default class Home extends React.Component {
                     }
                   }
                 },
-                subtitle: {
-                  text: 'Source: World Bank Data'
-                },
                 xAxis: {
                   categories: year_list.reverse() 
                 },
                 series: [{
                   name: country_name,
+                  color:'#53cc2b',
                   data: array_final.reverse() 
                 }]
               }
@@ -124,40 +124,45 @@ export default class Home extends React.Component {
 
     render() {
         return (
-            <div>
+            <div className="flex-container" key={"aaa"}> 
                 <header>
+                    <Avatar src={this.state.photoUrl}/>
                     <h3>
                         Welcome {this.state.name}
-                        <Avatar src={this.state.photoUrl}/>
                     </h3>
-                    <div id="signout">
-                        <RaisedButton
-                            backgroundColor="#a4c639"
-                            labelColor="#ffffff"
-                            label="Sign Out"
-                            onTouchTap={this.handleLogout}
-                        />
+                    <div id="signout" onTouchTap={this.handleLogout}>
+                        <FontIcon color="white" className="fa fa-sign-out"/>
                     </div>
                 </header>
-                <div id="contents">
-                    <div id="table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>User ID</th>
-                                    <th>Text</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {this.state.table.map(this.createTable)}
-                            </tbody>
-                        </table>
+                <div className="contents">
+                    <div className="data-container"> 
+                        <h4>Table Data</h4>
+                        <div id="table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>User ID</th>
+                                        <th>Text</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {this.state.table.map(this.createTable)}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    {this.state.chart.length == 0 ? "Loading..." :<Chart options={this.getChartData()} container={"chartId"} />}
+                    <div className="data-container">
+                        <h4>Chart Data</h4>
+                        {this.state.chart.length === 0 ? "Loading..." :<Chart options={this.getChartData()} container={"chartId"} />}
+                    </div>
                 </div>
                 <button className="button" onClick={this.handleButtonClick}><span>Next Screen </span></button>
+                <footer id="footer"><span>&copy; Copyright 2018</span></footer>
             </div>
         );
     }
 }
+
+
+export default Home;

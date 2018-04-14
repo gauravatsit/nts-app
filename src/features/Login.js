@@ -1,4 +1,4 @@
-import React from "react";
+import React, {Component} from 'react';
 import {FontIcon, RaisedButton} from "material-ui";
 import {loginWithGoogle} from "../helpers/auth";
 import {firebaseAuth} from "../config/constants";
@@ -7,18 +7,16 @@ import {firebaseAuth} from "../config/constants";
 const firebaseAuthKey = "firebaseAuthInProgress";
 const appTokenKey = "appToken";
 
-export default class Login extends React.Component {
+class Login extends Component {
 
     constructor(props) {
         super(props);
         this.state = {
             splashScreen: false
         };
-
-        this.handleGoogleLogin = this.handleGoogleLogin.bind(this);
     }
 
-    handleGoogleLogin() {
+    handleGoogleLogin = () => {
         loginWithGoogle()
             .catch(function (error) {
                 alert(error); // or show toast
@@ -33,9 +31,9 @@ export default class Login extends React.Component {
             return;
         }
 
-        firebaseAuth().onAuthStateChanged(user => {
+        firebaseAuth().onAuthStateChanged(user => {debugger
             if (user) {
-                console.log("User signed in: ", JSON.stringify(user));
+                //console.log("User signed in: ", JSON.stringify(user));
 
                 localStorage.removeItem(firebaseAuthKey);
                 localStorage.setItem(appTokenKey, user.uid);
@@ -44,11 +42,13 @@ export default class Login extends React.Component {
 
                 this.props.history.push("/app/home")
             }
+            else
+                localStorage.clear();
         });
     }
 
     render() {
-        console.log(firebaseAuthKey + "=" + localStorage.getItem(firebaseAuthKey));
+        //console.log(firebaseAuthKey + "=" + localStorage.getItem(firebaseAuthKey));
         if (localStorage.getItem(firebaseAuthKey) === "1") return <SplashScreen />;
         return <LoginPage handleGoogleLogin={this.handleGoogleLogin}/>;
     }
@@ -71,4 +71,6 @@ const LoginPage = ({handleGoogleLogin}) => (
         </div>
     </div>
 );
-const SplashScreen = () => (<p>Loading...</p>)
+const SplashScreen = () => (<div id="loader"></div>)
+
+export default Login;

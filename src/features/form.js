@@ -1,10 +1,11 @@
-import React from "react";
-import {Avatar, RaisedButton} from "material-ui";
+import React, {Component} from 'react';
+import {Avatar,FontIcon} from "material-ui";
 import {logout} from "../helpers/auth";
 import {fbdb} from "../config/constants";
 
 const appTokenKey = "appToken";
-export default class Form extends React.Component {
+
+class Form extends Component {
     constructor(props) {
         super(props);
         let userObj = JSON.parse(sessionStorage.getItem('userDetails'));
@@ -14,7 +15,8 @@ export default class Form extends React.Component {
             designation : '',
             teamName : '',
             orgName : '',
-            skills : ''
+            skills : '',
+            formData : []
         };
         this.handleLogout = this.handleLogout.bind(this);
         this.handleInputChange = this.handleInputChange.bind(this);
@@ -31,7 +33,7 @@ export default class Form extends React.Component {
         });
       }
     
-    handleSubmit(event) {debugger
+    handleSubmit(event) {
         event.preventDefault();
         let userData = this.state;
         fbdb.ref().push(userData);
@@ -40,8 +42,10 @@ export default class Form extends React.Component {
             designation : '',
             teamName : '',
             orgName : '',
-            skills : ''
+            skills : '',
+            formData : []
         })
+        this.fetchDataFromDB();
     }
 
     handleLogout() {
@@ -52,45 +56,97 @@ export default class Form extends React.Component {
         }.bind(this));
     }
 
+    fetchDataFromDB = () => {
+        let query = fbdb.ref();
+        let dbData = [];
+        query.on("value", (snapshot) => {
+            snapshot.forEach((childSnapshot) => {
+                let childData = childSnapshot.val();
+                dbData.push(childData);
+                this.loadInterval && this.setState({
+                    formData : dbData
+                })
+            });
+         }, function (error) {
+            console.log("Error: " + error.code);
+         });
+    }
+
+    createFormDataTable = (obj,ind) => {
+        return(
+            <tr key={ind}>
+                <td>{obj.name}</td>
+                <td>{obj.orgName}</td>
+                <td>{obj.designation}</td>
+                <td>{obj.teamName}</td>
+                <td>{obj.skills}</td>
+            </tr>
+        )
+    }
+    
+    componentDidMount(){
+        this.loadInterval = setInterval(this.fetchDataFromDB(),100);
+    }
+
+    componentWillUnmount(){
+        this.loadInterval && clearInterval(this.loadInterval);
+        this.loadInterval = false;
+    }
+
     render() {
         return (
-            <div>
+            <div className="flex-container">
                 <header>
+                    <Avatar src={this.state.photoUrl}/>
                     <h3>
                         Welcome {this.state.name}
-                        <Avatar src={this.state.photoUrl}/>
                     </h3>
-                    <div id="signout">
-                        <RaisedButton
-                            backgroundColor="#a4c639"
-                            labelColor="#ffffff"
-                            label="Sign Out"
-                            onTouchTap={this.handleLogout}
-                        />
+                    <div id="signout" onTouchTap={this.handleLogout}>
+                        <FontIcon color="white" className="fa fa-sign-out"/>
                     </div>
                 </header>
-                <div id="form-contents">
+                <div className="contents" id="form-contents">
                 <form onSubmit={this.handleSubmit}>
                     <label>
                         Designation:
-                        <input name="designation" type="text" value={this.state.designation} onChange={this.handleInputChange} />
+                        <input name="designation" type="text" placeholder="Enter Your Designation" value={this.state.designation} onChange={this.handleInputChange} />
                     </label>
                     <label>
                         Team Name:
-                        <input name="teamName" type="text" value={this.state.teamName} onChange={this.handleInputChange} />
+                        <input name="teamName" type="text" placeholder="Enter Your Team Name" value={this.state.teamName} onChange={this.handleInputChange} />
                     </label>
                     <label>
                         Organization Name:
-                        <input name="orgName" type="text" value={this.state.orgName} onChange={this.handleInputChange} />
+                        <input name="orgName" type="text" placeholder="Enter Your Organization Name" value={this.state.orgName} onChange={this.handleInputChange} />
                     </label>
                     <label>
                         Skills:
-                        <input name="skills" type="text" value={this.state.skills} onChange={this.handleInputChange} />
+                        <input name="skills" type="text" placeholder="Enter Your Skills" value={this.state.skills} onChange={this.handleInputChange} />
                     </label>
-                    <input type="submit" value="Submit" />
+                    <input id="form-submit" type="submit" value="Submit" />
                 </form>
+                <div id="formData-table">
+                    {this.state.formData.length > 0 && <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Organization</th>
+                                <th>Designation</th>
+                                <th>Team Name</th>
+                                <th>Skills</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {this.state.formData.map(this.createFormDataTable)}
+                        </tbody>
+                    </table>}
                 </div>
+                </div>
+                <footer id="footer"><span>&copy; Copyright 2018</span></footer>
             </div>
         );
     }
 }
+
+
+export default Form;
